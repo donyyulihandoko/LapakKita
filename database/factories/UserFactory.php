@@ -42,4 +42,40 @@ class UserFactory extends Factory
             'email_verified_at' => null,
         ]);
     }
+
+    public function super_admin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'email' => 'superadmin@gmail.com'
+        ])->afterCreating(function($user){
+            $user->assignRole('super-admin');
+        });
+    }
+
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'email' => 'admin@gmail.com'
+        ])->afterCreating(function($user){
+            $user->assignRole('admin');
+        });
+    }
+
+    public function seller(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'email' => 'seller@gmail.com'
+        ])->afterCreating(function($user){
+            $user->assignRole('seller');
+        });
+    }
+
+    public function customer(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'email' => 'customer@gmail.com'
+        ])->afterCreating(function($user){
+            $user->assignRole('customer');
+        });
+    }
 }
