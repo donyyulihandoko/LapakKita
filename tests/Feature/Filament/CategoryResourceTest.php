@@ -8,6 +8,10 @@ use App\Models\Category;
 use App\Models\User;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\Testing\TestAction;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
@@ -60,20 +64,6 @@ test('can sort category by name', function(){
             ->assertCanSeeTableRecords($categories->sortByDesc('name'), inOrder: true);
 });
 
-test('can bulk delete users', function () {
-    $categories = Category::factory()->count(5)->create();
-
-    Livewire::test(ListCategories::class)
-        ->assertCanSeeTableRecords($categories)
-        ->selectTableRecords($categories)
-        ->callAction(TestAction::make(DeleteBulkAction::class)->table()->bulk())
-        ->assertNotified()
-        ->assertCanNotSeeTableRecords($categories);
-
-    $categories->each(function ($category) {
-            $this->assertDatabaseMissing($category);
-        });;
-});
 
 test('shows the toggled hidden columns', function () {
     Livewire::test(ListCategories::class)
@@ -167,9 +157,7 @@ test('validates form data create category', function(array $data, array $errors)
 
 // Tet Resource Edit Category
 test('can load edit category page', function(){
-    $category = Category::factory()->create([
-        'icon' => UploadedFile::fake()->image('poster.jpg')
-    ]);
+    $category = Category::factory()->create();
 
     Livewire::test(EditCategory::class, ['record' => $category->slug])
         ->assertOk()
@@ -177,7 +165,6 @@ test('can load edit category page', function(){
             'name' => $category->name,
             'slug' => $category->slug,
             'description' => $category->description,
-            // 'icon' => $category->icon,
             'status' => $category->status
         ]);
 });
@@ -257,16 +244,104 @@ test('validates form data edit category', function(array $data, array $errors){
     ]
 ]);
 
-test('can delete category', function(){
+// Test Resource Delete Category
+test('can soft delete category', function () {
     $category = Category::factory()->create();
 
-    Livewire::test(EditCategory::class, ['record' => $category->slug])
+    Livewire::test(EditCategory::class, [
+        'record' => $category->getRouteKey(),
+    ])
         ->callAction(DeleteAction::class)
         ->assertNotified()
         ->assertRedirect();
 
-        $this->assertDatabaseMissing($category);
+    $this->assertSoftDeleted('categories', [
+        'id' => $category->id,
+    ]);
 });
+
+test('can force delete category permanently', function () {
+    // 1. Buat data yang sudah di-soft delete
+    $category = Category::factory()->create();
+    $category->delete();
+
+    // 2. Panggil ForceDeleteAction di halaman Edit
+    Livewire::test(EditCategory::class, [
+        'record' => $category->getRouteKey(),
+    ])
+        ->callAction(ForceDeleteAction::class)
+        ->assertNotified()
+        ->assertRedirect();
+
+    // 3. Pastikan data benar-benar hilang/terhapus dari database
+    $this->assertModelMissing($category);
+});
+
+test('can restore soft deleted category', function () {
+    // 1. Buat data yang sudah di-soft delete
+    $category = Category::factory()->create();
+    $category->delete();
+
+    // 2. Panggil RestoreAction di halaman Edit
+    Livewire::test(EditCategory::class, [
+        'record' => $category->getRouteKey(),
+    ])
+        ->callAction(RestoreAction::class)
+        ->assertNotified();
+
+    // 3. Pastikan kolom deleted_at kembali NULL
+    $this->assertNotSoftDeleted('categories', [
+        'id' => $category->id,
+    ]);
+});
+
+//  Test Bulk Delete and Restore Categories
+test('can bulk soft delete categories', function () {
+    $categories = Category::factory()->count(5)->create();
+
+    Livewire::test(ListCategories::class)
+        ->assertCanSeeTableRecords($categories)
+        ->callTableBulkAction(DeleteBulkAction::class, $categories)
+        ->assertNotified()
+        ->assertCanNotSeeTableRecords($categories);
+
+    $categories->each(function ($category) {
+        $this->assertSoftDeleted('categories', [
+            'id' => $category->id,
+        ]);
+    });
+});
+
+// test('can bulk force delete categories permanently', function () {
+//     // 1. Buat 5 data yang di-soft delete
+//     $categories = Category::factory()->count(5)->create();
+//     $categories->each->delete();
+
+//     // 2. Jalankan Bulk Force Delete Action
+//     Livewire::test(ListCategories::class)
+//         ->callTableBulkAction(ForceDeleteBulkAction::class, $categories)
+//         ->assertNotified();
+
+//     // 3. Pastikan semua data benar-benar terhapus dari database
+//     $categories->each(function ($category) {
+//         $this->assertModelMissing($category);
+//     });
+// });
+
+// test('can bulk restore soft deleted categories', function () {
+//     $categories = Category::factory()->count(5)->create();
+//     $categories->each->delete();
+
+//     Livewire::test(ListCategories::class)
+//         ->callAction(TestAction::make(RestoreBulkAction::class)->table()->bulk())
+//         ->assertNotified();
+
+//     $categories->each(function ($category) {
+//         $this->assertNotSoftDeleted('categories', [
+//             'id' => $category->id,
+//         ]);
+//     });
+// });
 
 // Test Resource View Category
 test('can load view category page', function(){
