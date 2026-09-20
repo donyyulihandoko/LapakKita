@@ -5,11 +5,13 @@ namespace App\Filament\Resources\Categories\Tables;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Table;
-// use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TrashedFilter;
+use Filament\Tables\Table;
 
 class CategoriesTable
 {
@@ -61,6 +63,7 @@ class CategoriesTable
                 ])
                 ->defaultSort('created_at', 'desc')
                 ->filters([
+                    TrashedFilter::make(),
                     // TernaryFilter::make('status')
                     //     ->label('Active Status')
                     //     ->trueLabel('Hanya Kategori Aktif')
@@ -72,9 +75,11 @@ class CategoriesTable
                     EditAction::make(),
                 ])
                 ->toolbarActions([
-                    BulkActionGroup::make([
-                        DeleteBulkAction::make(),
-                    ]),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
+                    RestoreBulkAction::make(),
+                ]),
             ]);
     }
 }

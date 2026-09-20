@@ -4,23 +4,36 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
-class Category extends Model
+class Store extends Model
 {
-    /** @use HasFactory<\Database\Factories\CategoryFactory> */
-    use HasFactory, SoftDeletes ,LogsActivity;
-    protected $table = 'categories';
+    /** @use HasFactory<\Database\Factories\StoreFactory> */
+    use HasFactory, SoftDeletes, LogsActivity;
 
+    protected $table = 'stores';
     protected $fillable = [
+        'user_id',
         'name',
         'slug',
-        'icon',
         'description',
-        'status'
+        'logo',
+        'banner',
+        'ktp_number',
+        'ktp_image',
+        'approval_status',
+        'message',
+        'status',
+        'is_verified',
     ];
+
+    protected $casts = [
+        'is_verified' => 'boolean'
+    ];
+
 
     public function getRouteKeyName(): string
     {
@@ -28,7 +41,7 @@ class Category extends Model
     }
 
 
-    // log activity
+    // Log Activity
     public function getDescriptionForEvent(string $eventName): string
     {
         return "Category has been {$eventName}";
@@ -42,5 +55,9 @@ class Category extends Model
             ->logOnlyDirty();
     }
 
-
+    // Relation
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id', 'id');
+    }
 }
